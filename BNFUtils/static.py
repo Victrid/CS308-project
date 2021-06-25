@@ -5,10 +5,10 @@ from .common import *
 
 
 def static_analysis(parse_result):
-    tree, symbol_table = type_tagging(parse_result)
+    tree, terminal_table, symbol_table, init_symbol = type_tagging(parse_result)
     tree = combine_inductions(tree)
     tree = remove_identical_branches(tree)
-    return tree, symbol_table
+    return tree, terminal_table, symbol_table, init_symbol
 
 
 def type_tagging(parse_result):
@@ -21,6 +21,7 @@ def type_tagging(parse_result):
             for word in sentence:
                 if word[0] != IDType.EPSILON:
                     all_table.append(word[1])
+    init_symbol = symbol_table[0]
     symbol_table = set(symbol_table)
     all_table = set(all_table)
     terminal_table = all_table.difference(symbol_table)
@@ -43,7 +44,7 @@ def type_tagging(parse_result):
             new_induction.append(tuple(new_sentence))
         linted.append(((IDType.INDUCT, symbol_table.index(
             induction[0][1])), tuple(new_induction)))
-    return tuple(linted), terminal_table
+    return tuple(linted), terminal_table, symbol_table, init_symbol
 
 
 def remove_identical_branches(parse_result):
