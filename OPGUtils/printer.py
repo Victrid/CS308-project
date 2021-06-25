@@ -1,7 +1,9 @@
 from OPGUtils.common import Priority
-import importlib
+
 
 def printer(table, terminal_table):
+    lines = []
+
     def judge(item):
         if item == Priority.more:
             return ">"
@@ -11,6 +13,7 @@ def printer(table, terminal_table):
             return "="
         return ""
 
-    print("\t" + "\t".join(terminal_table))
+    lines.append("\t" + "\t".join(terminal_table))
     for line, body in zip(table, terminal_table):
-        print(body +"\t"+ "\t".join([judge(item) for item in line]))
+        lines.append(body + "\t" + "\t".join([judge(item) for item in line]))
+    return [line + "\n" for line in lines]
