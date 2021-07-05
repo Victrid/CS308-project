@@ -1,0 +1,76 @@
+\documentclass[10pt]{ctexart}
+
+%\usepackage{ctex}
+
+\usepackage{geometry}
+\geometry{a4paper,scale=0.7}
+
+
+\usepackage[dvipsnames]{xcolor}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{appendix}
+
+\definecolor{codegreen}{rgb}{0,0.6,0} 
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\renewcommand{\lstlistingname}{代码段}
+\renewcommand{\lstlistlistingname}{\lstlistingname 索引}
+\renewcommand{\listfigurename}{插图索引}
+
+
+\lstset{style=mystyle}
+
+\setCJKfamilyfont{sy}{Source Han Serif CN}
+\newcommand{\name}[1][]{\CJKfamily{sy} 蒋圩淏}
+
+\author{\CJKfamily{sy} 李智聃 \thanks{学号：519021910131，电子邮箱：hyjrgslm-lzd@sjtu.edu.cn}\quad
+\CJKfamily{sy} 蒋圩淏 \thanks{学号：519021911045，电子邮箱：weihao.jiang@sjtu.edu.cn} }
+
+
+\date{}
+\title{编译原理实验报告} 
+
+\usepackage{hyperref}
+\hypersetup{hidelinks} 
+
+\begin{document}
+\maketitle
+\tableofcontents 
+\include{intro.tex} 
+\include{basic.tex}
+\include{addon.tex}
+%\include{tests.tex}
+
+\include{thoughts.tex}
+\appendix
+\include{figures.tex}
+\addcontentsline{toc}{section}{代码段索引}
+\lstlistoflistings
+\addcontentsline{toc}{section}{插图索引}
+\listoffigures
+\end{document}

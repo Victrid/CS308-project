@@ -1,0 +1,318 @@
+\section{基础部分：算符优先文法分析器}
+
+\subsection{实验环境}
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{c|c|c|c|c}
+  \hline
+  操作系统      & 架构      & 内核版本    & 编程语言   & 解释器版本           \\ \hline
+  GNU/Linux & x86\_64 & 5.12.13-2 & Python & 3.9.5 (CPython实现) \\ \hline
+  \end{tabular}
+\end{table}
+
+因为采用了\texttt{enum.auto}等语言特性，代码至少需要Python 3.6以上版本才能够运行。
+
+\subsection{实验设计}
+
+本实验可以简单分为两个部分：一个是解析类BNF的文法并转化成能够处理的语法形式，一个是对算符优先文法进行判定并生成优先级表。
+
+\subsubsection{类BNF解析}
+
+BNF是推导规则的集合，推导规则写为：
+
+\begin{equation}\nonumber
+  <symbol>\quad \rightarrow\quad \_\_expression\_\_
+\end{equation}
+
+其中，\texttt{\_\_expression\_\_} 为产生式，由一个或多个符号串组成。符号串间用分隔符$\mid$连接。没有出现在推导规则右侧的符号称为终结符。符号串可以为空，此时我们使用标记$\epsilon$表示。可以用BNF表述一个上下文无关文法。
+
+一个表述的例子为：
+
+\begin{lstlisting}[caption=一个BNF的例子,escapeinside={(*}{*)}]
+A -> B C | D
+   | E
+B -> A | E | F | (* $\epsilon $*)
+\end{lstlisting}
+
+\subsubsection*{词法分析}
+
+为了在不改变示例的文法例子的同时又能够接受更广泛的文法，我们补充规定语素间要以空格字符为分隔。例如连在一起的\texttt{BC|}被认为是一个新的符号，而不是\texttt{B}和\texttt{C}的串接与一个分隔符\texttt{|}。我们用简单的字符串操作创建一个词法分析器。
+
+\begin{lstlisting}[caption=词法分析，\texttt{BNFUtils.lex.lex},escapeinside={(*}{*)},language=python]
+def lex(string: str) -> list[(IDType, str)]:
+    lex_result = []
+    induct = "->"
+    branch = "|"
+    epsilon = "(*$\epsilon$*)"
+    token_list = string.split()
+    for item in token_list:
+        if item == induct:
+            lex_result.append((IDType.INDUCT, ""))
+            continue
+        if item == branch:
+            lex_result.append((IDType.BRANCH, ""))
+            continue
+        if item == epsilon:
+            lex_result.append((IDType.EPSILON, ""))
+            continue
+        lex_result.append((IDType.SYMBOL, item))
+    lex_result.append((IDType.DOLLAR, ""))
+    return lex_result
+\end{lstlisting}
+
+\subsubsection*{语法分析}
+
+我们随即可以用上述的词法单元给出给出描述BNF的BNF范式。
+
+\begin{lstlisting}[caption=BNF的BNF范式,escapeinside={(*}{*)}]
+S -> E | E S
+E -> SYMBOL INDUCT L
+L -> X | L BRANCH X
+X -> T | EPSILON
+T -> SYMBOL | T SYMBOL
+\end{lstlisting}
+
+然而我们注意到，因为符号\texttt{S}的移进前看\texttt{SYMBOL}同时是\texttt{T}的规约前看，会产生移进/规约冲突，至少需要LR(2)的解析器才能够看到\texttt{INDUCT}符号。我们因此在词法分析阶段做预处理，将\texttt{SYMBOL}与\texttt{INDUCT}合并（因为BNF表达上下文无关文法，\texttt{INDUCT}前一定只有一个\texttt{SYMBOL}）。这样我们就可以用LALR(1)的方式构建我们的解析器。这一步在\texttt{BNFUtils.lex.prepare}函数中进行操作，一部分错误的输入，会在此处被发现，并输出异常。
+
+\begin{lstlisting}[caption=词法分析阶段异常输入示例,escapeinside={(*}{*)}]
+Input: A -> -> B
+BNFUtils.common.BNFLexStageGrammarError: Wrong representation: A -> ->
+\end{lstlisting}
+
+紧接着就是语法分析器以及语法制导翻译的设计。我们希望将文法解析成树的形式，以方便后续的推导。位于\texttt{BNFUtils.LALR\_parse.parse}的语法分析器是Lookahead(1)的一个通用语法分析器，能够通过\texttt{BNFUtils.BNF\_LALR\_const}定义的动作、跳转、规约表完成相应的动作。LR分析器的一趟过程中我们同时完成S属性的语法制导的翻译。在规约时进行相应的操作。下面的规约数组中的每一个元组中的元素分别指代规约动作的表示，规约需要弹出栈的数目，规约结果的类型，和规约的函数。
+
+\begin{lstlisting}[caption=规约数组，\texttt{BNFUtils.BNF\_LALR\_const},language=python]
+Reduce = [
+    ("S'-> S", 1, GrammarType.Error, lambda s: None),
+    ("E -> INDUCT L", 2, GrammarType.E, lambda induct, induct_list: (induct, induct_list)),
+    ("L -> X", 1, GrammarType.L, lambda induction: [induction]),
+    ("L -> L BRANCH X", 3, GrammarType.L, lambda induct_list, _, induction: induct_list + [induction]),
+    ("S -> E", 1, GrammarType.S, lambda sentence: [sentence]),
+    ("S -> S E", 2, GrammarType.S, lambda sentence, sentence_list: sentence + [sentence_list]),
+    ("T -> SYMBOL", 1, GrammarType.T, lambda t: [t]),
+    ("T -> T SYMBOL", 2, GrammarType.T, lambda t_list, t: t_list + [t]),
+    ("X -> T", 1, GrammarType.X, lambda t: t),
+    ("X -> EPSILON", 1, GrammarType.X, lambda epsilon: epsilon)
+]
+\end{lstlisting}
+
+LALR分析的过程中，一些错误的输入会在此处被发现，并输出异常。
+
+\begin{lstlisting}[caption=语法分析阶段异常输入示例]
+Input:
+A -> | E
+E -> ( A )
+
+BNFUtils.common.BNFParseStageGrammarError: Grammar not correct.
+Error happened at state 3 when parsing.
+State 3 performs: E -> INDUCT • L
+Current state sentence:
+| E E -> ( A ) $
+Current state stack:
+status(0) A -> status(3)
+\end{lstlisting}
+
+\subsubsection*{语义分析}
+
+紧接着进行语义分析。语义分析包含符号表提取和语句处理。通过集合操作筛选出终结符表和非终结符表、指明初始符号，并用数字代替他们，以简化后续的操作，这个操作定义在\texttt{BNFUtils.static.type\_tagging}中。BNF没有规定初始符号。我们按照约定，使用第一行的文法符号作为初始符号。
+
+我们需要对不规范的语句进行处理。其中包括重复的定义和不规范的转写。这些不规范的语句会影响后续内容，增加额外的操作，因此需要进行处理以缩减优化。
+
+\begin{lstlisting}[caption=不规范的语句示例]
+重复定义：
+E -> A | B A | B A      => E -> A | B A
+
+不规范的转写：
+E -> A
+E -> B A                => E -> A | B A
+\end{lstlisting}
+
+以以下正确但不规范的BNF文法为例，当分析完成时，输出与结果如下。
+
+\begin{lstlisting}[caption=BNF分析结果]
+Input:
+A -> B A | C
+A -> C
+B -> C
+
+Output:
+WARNING: identical branches found. Removed.
+
+Result:
+Grammar tree:
+(
+  (
+    (INDUCT, 0),
+    (
+      ( (NON_TERMINAL, 1), (NON_TERMINAL, 0) ),
+      ( (TERMINAL, 0) )
+    )
+  ),
+  (
+    (INDUCT, 1),
+    (
+      ( (TERMINAL, 0) )
+    )
+  )
+)
+
+terminal:    ['C']
+symbol:      ['A', 'B']
+init_symbol: A
+\end{lstlisting}
+
+\subsubsection{算符优先表生成}
+
+\subsubsection*{算符优先文法文法简介}
+
+算符优先文法的特点是文法的产生式中不含两个相邻的非终结符。其定义如下：
+
+假定G是不含$\epsilon$-产生式的算符文法。对于任何一对终结符$a$, $b$，有：
+
+\begin{itemize}
+  \item $a \doteq b$, 如果 $ P \rightarrow^* \alpha a b \beta \in G \lor P \rightarrow^* \alpha a Q b \beta \in G $
+  \item $a \lessdot b$, 如果 $ P \rightarrow^* \alpha a R \beta \in G, R  \rightarrow^* b\beta \lor R \rightarrow^* Qb\beta $
+  \item $a \gtrdot b$, 如果 $ P \rightarrow^* \alpha R b \beta \in G, R  \rightarrow^* \alpha a \lor R \rightarrow^* \alpha aQ $
+\end{itemize}
+
+如果对于任何一对终结符$a$, $b$, 最多满足$a \doteq b, a \lessdot b, a \gtrdot b$三个条件之一，则称为算符优先文法，否则则具有二义性。
+
+\subsubsection*{预处理}
+
+我们先判断这个文法是否是一个算符优先文法。在预处理这一步，我们能够进行的判断是是否存在$\epsilon$-产生式和两个相邻的非终结符。这一步在\texttt{OPGUtils.static.OPG\_check}中展现。
+
+接下来，根据文法的定义，我们需要加入一个推导式 $S' \rightarrow \$ S\$ $，其中S是初始符号，$\$$是标记语句端点的终结符。
+
+\subsubsection*{FIRSTVT，LASTVT表}
+
+在前面对算符之间优先级关系的定义中，我们需要寻找非终结符的首终结符和尾终结符。我们定义以下两个概念：
+
+首终结符集 $FIRSTVT(B) = \{b | B\rightarrow^* b\beta \lor B \rightarrow^* Qb\beta \}$
+
+尾终结符集 $LASTVT(B) = \{b | B\rightarrow^* \beta b \lor B \rightarrow^* \beta bQ \}$
+
+此时可以定义新的终结符关系：
+
+\begin{itemize}
+  \item $a \doteq b$, 如果 $ P \rightarrow \alpha a b \beta \in G \lor P \rightarrow \alpha a Q b \beta \in G $
+  \item $ P \rightarrow \alpha a R \beta \in G, \forall b \in FIRSTVT(R), a \lessdot b$
+  \item $ P \rightarrow \alpha R b \beta \in G,\forall a \in LASTVT(R), a \gtrdot b$
+\end{itemize}
+
+而首尾终结符集的构造可以按照定义进行。首先将直接的继承关系引入。
+
+我们通过栈的方式传播更新，来构建首尾终结符集。
+
+\begin{lstlisting}[caption=构建首终结符集，\texttt{OPGUtils.construct}, language=python]
+def first_vt(grammar):
+    first_vt_table = [set() for _ in range(len(grammar))]
+    stack = []
+
+    for induction in grammar:
+        for sentence in induction[1]:
+            # B -> aβ, a in FIRSTVT(B)
+            if sentence[0][0] == IDType.TERMINAL:
+                first_vt_table[induction[0][1]].add(sentence[0][1])
+                stack.append(induction[0][1])
+            # B -> Daβ, a in FIRSTVT(B)
+            if len(sentence) > 1 and sentence[0][0] == IDType.NON_TERMINAL and sentence[1][0] == IDType.TERMINAL:
+                first_vt_table[induction[0][1]].add(sentence[1][1])
+                stack.append(induction[0][1])
+
+    while len(stack):
+        non_terminal = stack.pop()
+        for induction in grammar:
+            for sentence in induction[1]:
+                # B -> Dβ, FIRSTVT(D) in FIRSTVT(B)
+                if sentence[0][0] == IDType.NON_TERMINAL and sentence[0][1] == non_terminal:
+                    if len(first_vt_table[sentence[0][1]].difference(first_vt_table[induction[0][1]])):
+                        first_vt_table[induction[0][1]] = first_vt_table[induction[0][1]] | first_vt_table[
+                            sentence[0][1]]
+                        stack.append(induction[0][1])
+                    pass
+    return first_vt_table
+\end{lstlisting}
+
+首先我们将直接项加入集合中，对于首终结符集即为$B\rightarrow b\beta, B \rightarrow Qb\beta$，并加入传播更新栈。接下来我们更新间接操作。对于栈顶$Q$，如果生成式中有 $B\rightarrow Q\beta $，说明$FIRSTVT(Q) \subset FIRSTVT(B)$。我们通过集合操作，如果更新了$B$则将$B$加入传播更新栈。如此不断更新，当栈清空时，此时便完成了首终结符集。尾终结符集的构造手段类似。
+
+\subsubsection*{构造算符优先级表}
+
+我们可以按照上面的定义，构造我们的算符优先级表。这一步由函数\texttt{OPGUtils.\allowbreak{}filltable.\allowbreak{}fill\_table}实现。在进行的同时我们检查是否存在二义性。如果对于任何一对终结符$a$, $b$, 最多满足$a \doteq b, a \lessdot b, a \gtrdot b$三个条件之一。当此条件冲突时即可判定具有二义性。
+
+\begin{lstlisting}[caption=构造算符优先级表，\texttt{OPGUtils.filltable}, language=python]
+def fill_table(table, firstvt, lastvt, grammar):
+    def mark(state, a, b):
+        if table[a][b] != Priority.undefined and table[a][b] != state:
+            raise OPGAmbiguousError("This OPG is ambiguous!")
+        table[a][b] = state
+
+    for induction in grammar:
+        for sentence in induction[1]:
+            for i in range(len(sentence) - 1):
+                if sentence[i][0] == IDType.TERMINAL and sentence[i + 1][0] == IDType.TERMINAL:
+                    mark(Priority.equal, sentence[i][1], sentence[i + 1][1])
+                if sentence[i][0] == IDType.TERMINAL and sentence[i + 1][0] == IDType.NON_TERMINAL:
+                    for term in firstvt[sentence[i + 1][1]]:
+                        mark(Priority.less, sentence[i][1], term)
+                if sentence[i][0] == IDType.NON_TERMINAL and sentence[i + 1][0] == IDType.TERMINAL:
+                    for term in lastvt[sentence[i][1]]:
+                        mark(Priority.more, term, sentence[i + 1][1])
+                if i != len(sentence) - 2 and sentence[i][0] == IDType.TERMINAL and \
+                        sentence[i + 2][0] == IDType.TERMINAL and sentence[i + 1][0] == IDType.NON_TERMINAL:
+                    mark(Priority.equal, sentence[i][1], sentence[i + 2][1])
+    return
+\end{lstlisting}
+
+我们使用测试文法进行测试：
+
+\begin{lstlisting}[caption=测试文法1]
+E -> E + T | T
+T -> T * F | F
+F -> ( E ) | id
+
+    *   id  )   (   +   $
+*   >   <   >   <   >   >
+id  >       >       >   >
+)   >       >       >   >
+(   <   <   =   <   <
++   <   <   >   <   >   >
+$   <   <       <   <   =
+
+进程已结束，退出代码为 0
+\end{lstlisting}
+
+\begin{lstlisting}[caption=测试文法2]
+E -> E + E | E * E | ( E ) | id 
+
+OPGUtils.common.OPGAmbiguousError: This OPG is ambiguous!
+
+进程已结束，退出代码为 1
+\end{lstlisting}
+
+\subsubsection{输入输出}
+
+我们的程序使用命令行界面控制输入输出。命令行参数如下。
+
+\begin{lstlisting}[caption=命令行参数]
+usage: OPGAnalysis.py [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [--need-traceback]
+
+Generate the OPG Table.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -i INPUT_FILE, --input-file INPUT_FILE
+                        Specify input file.
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        Specify output file.
+  --need-traceback      Show the traceback when error occurs.
+\end{lstlisting}
+
+给出调用示例文法的文法例子：
+
+\begin{lstlisting}[caption=命令行示例]
+python ./OPGAnalysis.py -i example/input1.txt -o example/output1.txt
+python ./OPGAnalysis.py -i example/input2.txt -o example/output2.txt
+\end{lstlisting}
+
+在执行中，不会写入\texttt{example/output2.txt}，因为文法是二义性的。

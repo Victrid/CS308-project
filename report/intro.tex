@@ -1,0 +1,33 @@
+\section{实验概述}
+\subsection*{实验名称}
+
+编译原理大作业实验
+
+\subsection*{实验目的}
+
+\begin{enumerate}
+\item 理解算符优先文法，并编写程序，通过类BNF的文法输入得到对应的算符优先分析表。
+\item 熟悉TVM框架，并通过TVM框架提供的操作原语，实现在llvm上的卷积计算优化。
+\end{enumerate}
+
+\subsection*{分工情况}
+
+{\CJKfamily{sy}实验的完成与每一个人都紧密相关。其中，蒋圩淏主要完成实验的基础部分，李智聃主要完成实验的加分项部分。双方都在对方对应的项目中做出贡献。}
+
+\subsection*{实验结果}
+
+基础部分实现了一个有较高健壮性的算符优先分析表生成器，这个分析表不但能够分析正确的文法，对于错误的文法、不规范的文法和有二义性的文法也有对应的处理与错误提示。
+
+加分项中，使用TVM框架实现了对卷积计算的高性能优化，不论是小规模还是大规模的输入都能够得到较好的优化。
+
+加分项的优化结果表格
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{c|c|c|c}
+    \hline
+    输入大小和输出大小                                                                                          & 优化前的时间           & 优化后的时间          & 提升效率   \\ \hline
+    \begin{tabular}[c]{@{}c@{}}n, ic, ih, iw = 1, 3, 32, 32\\ oc, kh, kw = 32, 3, 3\end{tabular}       & 0.104413 ms      & 0.016186 ms     & 91.2\% \\ \hline
+    \begin{tabular}[c]{@{}c@{}}n, ic, ih, iw = 100, 512, 32, 32\\ oc, kh, kw = 1024, 3, 3\end{tabular} & 505076.882729 ms & 16044.837527 ms & 96.8\% \\ \hline
+    \end{tabular}
+\end{table}
