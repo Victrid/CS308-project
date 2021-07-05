@@ -37,19 +37,19 @@ Reduce = [
 ]
 
 StateName = [
-    "S' -> · S",
-    "S -> E · ",
-    "S' -> S · \nS  -> S · E",
-    "E -> INDUCT · L",
-    "S -> S E · ",
-    "E -> INDUCT L ·\nL -> L · BRANCH X",
-    "T -> T · SYMBOL\nX -> T · ",
-    "L -> X · ",
-    "X -> EPSILON · ",
-    "T -> SYMBOL · ",
-    "L -> L BRANCH · X",
-    "T -> T SYMBOL · ",
-    "L -> L BRANCH X · "
+    "S' -> • S",
+    "S -> E • ",
+    "S' -> S • \nS  -> S • E",
+    "E -> INDUCT • L",
+    "S -> S E • ",
+    "E -> INDUCT L •\nL -> L • BRANCH X",
+    "T -> T • SYMBOL\nX -> T • ",
+    "L -> X • ",
+    "X -> EPSILON • ",
+    "T -> SYMBOL • ",
+    "L -> L BRANCH • X",
+    "T -> T SYMBOL • ",
+    "L -> L BRANCH X • "
 ]
 
 Symbol: list[IDType] = [IDType.BRANCH, IDType.EPSILON,

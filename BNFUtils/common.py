@@ -29,31 +29,36 @@ class BNFLexStageGrammarError(Exception):
 class BNFParseStageGrammarError(Exception):
 
     @staticmethod
+    def item_tuple_printer(item):
+        if item[0] == IDType.INDUCT:
+            return [item[1], "->"]
+        elif item[0] == IDType.BRANCH:
+            return ["|"]
+        elif item[0] == IDType.DOLLAR:
+            return ["$"]
+        elif item[0] == IDType.EPSILON:
+            return ["ϵ"]
+        elif item[0] == IDType.SYMBOL:
+            return [item[1]]
+
+    @staticmethod
     def sentence_printer(current_index, sentence):
         contents = []
         for item in sentence[current_index:]:
-            if item[0] == IDType.INDUCT:
-                contents.append(item[1])
-                contents.append("->")
-            elif item[0] == IDType.BRANCH:
-                contents.append("|")
-            elif item[0] == IDType.DOLLAR:
-                contents.append("$")
-            elif item[0] == IDType.EPSILON:
-                contents.append("ϵ")
-            elif item[0] == IDType.SYMBOL:
-                contents.append(item[1])
+            contents += BNFParseStageGrammarError.item_tuple_printer(item)
         return "Current state sentence:\n" + " ".join(contents)
 
     @staticmethod
     def stack_printer(stack):
-        lines = ["Current state stack:"]
+        lines = []
         for item in stack:
             if type(item) is int:
-                lines.append("status {}".format(item))
+                lines.append("status({})".format(item))
+            elif type(item) is tuple:
+                lines += BNFParseStageGrammarError.item_tuple_printer(item)
             else:
                 lines.append(str(item))
-        return "\n".join(lines)
+        return "Current state stack:\n" + " ".join(lines)
 
     def __init__(self, state, state_name, stack, index, sentence):
         super().__init__(
