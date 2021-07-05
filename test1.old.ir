@@ -1,0 +1,32 @@
+primfn(A_1: handle, B_1: handle, compute_1: handle) -> ()
+  attr = {"global_symbol": "main", "tir.noalias": True}
+  buffers = {compute: Buffer(compute_2: Pointer(float32), float32, [1, 32, 32, 32], []),
+             B: Buffer(B_2: Pointer(float32), float32, [32, 3, 3, 3], []),
+             A: Buffer(A_2: Pointer(float32), float32, [1, 3, 32, 32], [])}
+  buffer_map = {A_1: A, B_1: B, compute_1: compute} {
+  attr [pad_temp: Pointer(float32)] "storage_scope" = "global";
+  allocate(pad_temp, float32, [3468]) {
+    for (i1: int32, 0, 3) {
+      for (i2: int32, 0, 34) {
+        for (i3: int32, 0, 34) {
+          pad_temp[(((i1*1156) + (i2*34)) + i3)] = @tir.if_then_else(((((1 <= i2) && (i2 < 33)) && (1 <= i3)) && (i3 < 33)), (float32*)A_2[((((i1*1024) + (i2*32)) + i3) - 33)], 0f32, dtype=float32)
+        }
+      }
+    }
+    for (ff: int32, 0, 32) {
+      for (yy: int32, 0, 32) {
+        for (xx: int32, 0, 32) {
+          compute_2[(((ff*1024) + (yy*32)) + xx)] = 0f32
+          for (rc: int32, 0, 3) {
+            for (ry: int32, 0, 3) {
+              for (rx: int32, 0, 3) {
+                compute_2[(((ff*1024) + (yy*32)) + xx)] = ((float32*)compute_2[(((ff*1024) + (yy*32)) + xx)] + ((float32*)pad_temp[(((((rc*1156) + (yy*34)) + (ry*34)) + xx) + rx)]*(float32*)B_2[((((ff*27) + (rc*9)) + (ry*3)) + rx)]))
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+

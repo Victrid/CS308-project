@@ -1,0 +1,38 @@
+primfn(A_1: handle, B_1: handle, compute_1: handle) -> ()
+  attr = {"global_symbol": "main", "tir.noalias": True}
+  buffers = {compute: Buffer(compute_2: Pointer(float32), float32, [100, 1024, 32, 32], []),
+             B: Buffer(B_2: Pointer(float32), float32, [1024, 512, 3, 3], []),
+             A: Buffer(A_2: Pointer(float32), float32, [100, 512, 32, 32], [])}
+  buffer_map = {A_1: A, B_1: B, compute_1: compute} {
+  attr [pad_temp: Pointer(float32)] "storage_scope" = "global";
+  allocate(pad_temp, float32, [59187200]) {
+    for (i0: int32, 0, 100) {
+      for (i1: int32, 0, 512) {
+        for (i2: int32, 0, 34) {
+          for (i3: int32, 0, 34) {
+            pad_temp[((((i0*591872) + (i1*1156)) + (i2*34)) + i3)] = @tir.if_then_else(((((1 <= i2) && (i2 < 33)) && (1 <= i3)) && (i3 < 33)), (float32*)A_2[(((((i0*524288) + (i1*1024)) + (i2*32)) + i3) - 33)], 0f32, dtype=float32)
+          }
+        }
+      }
+    }
+    for (nn: int32, 0, 100) {
+      for (ff: int32, 0, 1024) "parallel" {
+        for (yy: int32, 0, 32) {
+          compute_2[ramp((((nn*1048576) + (ff*1024)) + (yy*32)), 1, 32)] = broadcast(0f32, 32)
+          for (rc: int32, 0, 512) {
+            compute_2[ramp((((nn*1048576) + (ff*1024)) + (yy*32)), 1, 32)] = ((float32x32*)compute_2[ramp((((nn*1048576) + (ff*1024)) + (yy*32)), 1, 32)] + ((float32x32*)pad_temp[ramp((((nn*591872) + (rc*1156)) + (yy*34)), 1, 32)]*broadcast((float32*)B_2[((ff*4608) + (rc*9))], 32)))
+            compute_2[ramp((((nn*1048576) + (ff*1024)) + (yy*32)), 1, 32)] = ((float32x32*)compute_2[ramp((((nn*1048576) + (ff*1024)) + (yy*32)), 1, 32)] + ((float32x32*)pad_temp[ramp(((((nn*591872) + (rc*1156)) + (yy*34)) + 1), 1, 32)]*broadcast((float32*)B_2[(((ff*4608) + (rc*9)) + 1)], 32)))
+            compute_2[ramp((((nn*1048576) + (ff*1024)) + (yy*32)), 1, 32)] = ((float32x32*)compute_2[ramp((((nn*1048576) + (ff*1024)) + (yy*32)), 1, 32)] + ((float32x32*)pad_temp[ramp(((((nn*591872) + (rc*1156)) + (yy*34)) + 2), 1, 32)]*broadcast((float32*)B_2[(((ff*4608) + (rc*9)) + 2)], 32)))
+            compute_2[ramp((((nn*1048576) + (ff*1024)) + (yy*32)), 1, 32)] = ((float32x32*)compute_2[ramp((((nn*1048576) + (ff*1024)) + (yy*32)), 1, 32)] + ((float32x32*)pad_temp[ramp(((((nn*591872) + (rc*1156)) + (yy*34)) + 34), 1, 32)]*broadcast((float32*)B_2[(((ff*4608) + (rc*9)) + 3)], 32)))
+            compute_2[ramp((((nn*1048576) + (ff*1024)) + (yy*32)), 1, 32)] = ((float32x32*)compute_2[ramp((((nn*1048576) + (ff*1024)) + (yy*32)), 1, 32)] + ((float32x32*)pad_temp[ramp(((((nn*591872) + (rc*1156)) + (yy*34)) + 35), 1, 32)]*broadcast((float32*)B_2[(((ff*4608) + (rc*9)) + 4)], 32)))
+            compute_2[ramp((((nn*1048576) + (ff*1024)) + (yy*32)), 1, 32)] = ((float32x32*)compute_2[ramp((((nn*1048576) + (ff*1024)) + (yy*32)), 1, 32)] + ((float32x32*)pad_temp[ramp(((((nn*591872) + (rc*1156)) + (yy*34)) + 36), 1, 32)]*broadcast((float32*)B_2[(((ff*4608) + (rc*9)) + 5)], 32)))
+            compute_2[ramp((((nn*1048576) + (ff*1024)) + (yy*32)), 1, 32)] = ((float32x32*)compute_2[ramp((((nn*1048576) + (ff*1024)) + (yy*32)), 1, 32)] + ((float32x32*)pad_temp[ramp(((((nn*591872) + (rc*1156)) + (yy*34)) + 68), 1, 32)]*broadcast((float32*)B_2[(((ff*4608) + (rc*9)) + 6)], 32)))
+            compute_2[ramp((((nn*1048576) + (ff*1024)) + (yy*32)), 1, 32)] = ((float32x32*)compute_2[ramp((((nn*1048576) + (ff*1024)) + (yy*32)), 1, 32)] + ((float32x32*)pad_temp[ramp(((((nn*591872) + (rc*1156)) + (yy*34)) + 69), 1, 32)]*broadcast((float32*)B_2[(((ff*4608) + (rc*9)) + 7)], 32)))
+            compute_2[ramp((((nn*1048576) + (ff*1024)) + (yy*32)), 1, 32)] = ((float32x32*)compute_2[ramp((((nn*1048576) + (ff*1024)) + (yy*32)), 1, 32)] + ((float32x32*)pad_temp[ramp(((((nn*591872) + (rc*1156)) + (yy*34)) + 70), 1, 32)]*broadcast((float32*)B_2[(((ff*4608) + (rc*9)) + 8)], 32)))
+          }
+        }
+      }
+    }
+  }
+}
+
